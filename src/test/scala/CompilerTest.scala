@@ -1,0 +1,5 @@
+object CompilerTest {
+  object JvmByteCodeCompilerTest {
+
+  }
+}
