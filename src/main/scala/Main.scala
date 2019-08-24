@@ -1,5 +1,7 @@
-import KotlinParser.KotlinFileContext
 import Main.code
+import de.hanno.kotlin.KotlinParser.KotlinFileContext
+import de.hanno.kotlin.{KotlinParser, KotlinParserBaseListener}
+import lexerparser.{KotlinFileTreeWalker, LexerParser}
 import org.antlr.v4.runtime.tree.{AbstractParseTreeVisitor, ParseTree, ParseTreeWalker}
 import org.antlr.v4.runtime.{CharStreams, CommonTokenStream}
 
@@ -29,26 +31,3 @@ fun baz() = println("Hello, again!")
   }
 }
 
-class KotlinFileTreeWalker(file: KotlinFileContext) {
-  def walk(listener: KotlinParserBaseListener): Unit = {
-    new ParseTreeWalker().walk(listener, file)
-  }
-}
-
-class LexerParser {
-  def read(sourceCode: String): KotlinFileContext = {
-
-    val lexer = new KotlinLexer(CharStreams.fromString(code))
-    val tokens = new CommonTokenStream(lexer)
-    val parser = new KotlinParser(tokens)
-
-    parser.kotlinFile()
-  }
-}
-
-class Visitor extends AbstractParseTreeVisitor[Visitor] {
-  override def visit(tree: ParseTree): Visitor = {
-    println(tree)
-    super.visit(tree)
-  }
-}

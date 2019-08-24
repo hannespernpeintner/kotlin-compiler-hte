@@ -21,17 +21,31 @@ dependencies {
     testImplementation("junit:junit:4.12")
 }
 tasks {
-    named<AntlrTask>("generateGrammarSource") {
+    val generateGrammarSourceTask = named<AntlrTask>("generateGrammarSource") {
         maxHeapSize = "64m"
         arguments = arguments + listOf("-visitor", "-long-messages")
+    }
+    create("copyGrammarToPackage", Copy::class.java) {
+        dependsOn(generateGrammarSourceTask)
+        from("${project.buildDir.resolve("generated-src/antlr/main")}")
+        into("${project.buildDir.resolve("generated-src/antlr/main/de/hanno/kotlin")}")
+        doLast {
+            project.buildDir.resolve("generated-src/antlr/main").listFiles().filter { !it.isDirectory }.forEach {
+                it.delete()
+            }
+            project.buildDir.resolve("generated-src/antlr/main/de/hanno/kotlin").listFiles().filter { it.isDirectory }.forEach {
+                it.deleteRecursively()
+            }
+            // TODO: Make this more pretty please
+        }
     }
 
     named<ScalaCompile>("compileScala") {
         dependsOn("generateGrammarSource")
     }
     sourceSets {
-        getByName("generated") {
-            java.srcDir("generated-src/antlr/main/")
+        create("generated") {
+            java.srcDir("generated-src/antlr/main/de/hanno/kotlin")
         }
     }
 //    compileJava.source sourceSets.generated.java, sourceSets.main.java

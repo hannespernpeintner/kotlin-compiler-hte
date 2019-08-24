@@ -4,6 +4,10 @@
 
 lexer grammar KotlinLexer;
 
+@header {
+package de.hanno.kotlin;
+}
+
 import UnicodeClasses;
 
 // SECTION: lexicalGeneral

@@ -4,6 +4,10 @@
 
 parser grammar KotlinParser;
 
+@header {
+package de.hanno.kotlin;
+}
+
 options { tokenVocab = KotlinLexer; }
 
 // SECTION: general
