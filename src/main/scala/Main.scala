@@ -1,9 +1,5 @@
-import Main.code
-import de.hanno.kotlin.KotlinParser.KotlinFileContext
 import de.hanno.kotlin.{KotlinParser, KotlinParserBaseListener}
 import lexerparser.{KotlinFileTreeWalker, LexerParser}
-import org.antlr.v4.runtime.tree.{AbstractParseTreeVisitor, ParseTree, ParseTreeWalker}
-import org.antlr.v4.runtime.{CharStreams, CommonTokenStream}
 
 object Main {
 
