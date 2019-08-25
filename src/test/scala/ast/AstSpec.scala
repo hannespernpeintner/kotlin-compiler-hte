@@ -49,6 +49,7 @@ class NestedAstSpec extends FlatSpec {
     assert(ast.head.asInstanceOf[Clazz].name == "Foo")
     assert(ast.head.parent.isEmpty)
     assert(ast.head.children.size == 1)
+    assert(ast.head.children.head.asInstanceOf[Function].bodyType == ExpressionBody)
   }
 
 }
