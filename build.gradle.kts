@@ -25,7 +25,7 @@ tasks {
         maxHeapSize = "64m"
         arguments = arguments + listOf("-visitor", "-long-messages")
     }
-    create("copyGrammarToPackage", Copy::class.java) {
+    val copyGrammarToPackage = create("copyGrammarToPackage", Copy::class.java) {
         dependsOn(generateGrammarSourceTask)
         from("${project.buildDir.resolve("generated-src/antlr/main")}")
         into("${project.buildDir.resolve("generated-src/antlr/main/de/hanno/kotlin")}")
@@ -39,6 +39,7 @@ tasks {
             // TODO: Make this more pretty please
         }
     }
+    assemble { dependsOn(copyGrammarToPackage) }
 
     named<ScalaCompile>("compileScala") {
         dependsOn("generateGrammarSource")

@@ -41,12 +41,11 @@ class TopLevelAstSpec extends FlatSpec {
 
 class ClassLevelAstSpec extends FlatSpec {
 
-  def commonAssertions(ast: List[Instruction]): Unit = {
+  def commonAssertions(ast: List[Ast]): Unit = {
     assert(ast.size == 1)
     val classDef = ast.head
     assert(classDef.isInstanceOf[Clazz])
     assert(classDef.asInstanceOf[Clazz].name == "Foo")
-    assert(classDef.parent.isEmpty)
     assert(classDef.children.size == 1)
   }
 
@@ -79,8 +78,15 @@ class ClassLevelAstSpec extends FlatSpec {
     val barFunction = ast.head.children.head.asInstanceOf[Function]
     assert(barFunction.bodyType == RegularFunctionBody)
     assert(barFunction.children.size == 2)
-    assert(barFunction.children.head.asInstanceOf[Function].name == "foo")
-    assert(barFunction.children.get(1).get.isInstanceOf[FunctionCall])
+    val fooFunction = barFunction.children.get(0).get.asInstanceOf[Function]
+    assert(fooFunction.name == "foo")
+    assert(fooFunction.children.size == 1)
+    val printlnFunctionCall = fooFunction.children.get(0).get.asInstanceOf[FunctionCall]
+    assert(printlnFunctionCall.name == "println")
+    assert(printlnFunctionCall.receiver.isEmpty)
+    assert(printlnFunctionCall.params.get == "1")
+    val fooFunctionCall = barFunction.children.get(1).get.asInstanceOf[FunctionCall]
+    assert(fooFunctionCall.name == "foo")
   }
 
 }

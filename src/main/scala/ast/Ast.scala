@@ -5,52 +5,45 @@ import de.hanno.kotlin.{KotlinParser, KotlinParserBaseListener}
 import lexerparser.{KotlinFileTreeWalker, LexerParser}
 
 import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
 import scala.util.Try
 
 class AstCreator extends KotlinParserBaseListener {
 
-  def create(sourceCode: String): List[Instruction] = {
+  def create(sourceCode: String): List[Ast] = {
     create(new LexerParser().read(sourceCode))
   }
 
-  def create(file: KotlinFileContext): List[Instruction] = {
+  def create(file: KotlinFileContext): List[Ast] = {
 
-    val instructions = new ListBuffer[Statement]()
+    val stack = new mutable.Stack[Ast]
+    stack.push(File())
 
-    val stack = new mutable.Stack[Instruction]
+    var insideExpression = true
 
-    def isTopLevel = stack.isEmpty
+    def push(it: Ast): Unit = {
+      stack.head.children += it
+      stack.push(it)
+    }
 
     new KotlinFileTreeWalker(file).walk(new KotlinParserBaseListener() {
       override def enterFunctionDeclaration(ctx: KotlinParser.FunctionDeclarationContext): Unit = {
-        val isClassMember = ctx.getParent.getParent.isInstanceOf[ClassMemberDeclarationContext]
-        if(!isClassMember) return
-        enterDeclareFunction(instructions, stack, isTopLevel _, ctx)
+          val function = Function(name = ctx.simpleIdentifier().getText, parent = stack.headOption)
+          push(function)
       }
 
       override def exitFunctionDeclaration(ctx: KotlinParser.FunctionDeclarationContext): Unit = {
-        val isClassMember = ctx.getParent.getParent.isInstanceOf[ClassMemberDeclarationContext]
-        if(!isClassMember) return
-        exitDeclareFunction(stack)
+        stack.pop()
       }
 
       override def enterFunctionBody(ctx: KotlinParser.FunctionBodyContext): Unit = {
-        val isClassMember = !ctx.getParent.getParent.isInstanceOf[DeclarationContext]
-        if(!isClassMember) return
-        stack.headOption.map(_.asInstanceOf[Function]).foreach(_.bodyType = FunctionBodyType(ctx))
+        stack.head.asInstanceOf[Function].bodyType = FunctionBodyType(ctx)
       }
       override def exitFunctionBody(ctx: KotlinParser.FunctionBodyContext): Unit = {
-        val isClassMember = !ctx.getParent.getParent.isInstanceOf[DeclarationContext]
-        if(!isClassMember) return
-        stack.pop
       }
 
       override def enterClassDeclaration(ctx: KotlinParser.ClassDeclarationContext): Unit = {
         val clazz = Clazz(ctx.simpleIdentifier().getText, stack.headOption)
-        stack.headOption.map(_.children += clazz)
-        if(isTopLevel) instructions += clazz
-        stack.push(clazz)
+        push(clazz)
       }
 
       override def exitClassDeclaration(ctx: KotlinParser.ClassDeclarationContext): Unit = {
@@ -60,70 +53,74 @@ class AstCreator extends KotlinParserBaseListener {
       override def enterPropertyDeclaration(ctx: KotlinParser.PropertyDeclarationContext): Unit = {
         val declarationContext = ctx.variableDeclaration()
         val property = Property(declarationContext.simpleIdentifier().getText, stack.headOption)
-        stack.headOption.map(_.children += property)
-        if(isTopLevel) instructions += property
-        stack.push(property)
+        push(property)
       }
 
       override def exitPropertyDeclaration(ctx: KotlinParser.PropertyDeclarationContext): Unit = {
         stack.pop
       }
 
+      var expressionCounter = 0
       override def enterExpression(ctx: KotlinParser.ExpressionContext): Unit = {
-        stack.headOption.map(it => it.children += ExpressionType(ctx, Some(it)))
+        val expression = ExpressionType(ctx, stack.headOption)
+        if(expressionCounter == 0) {
+          push(expression)
+          expressionCounter += 1
+        } else {
+          stack.head.children += expression
+        }
       }
 
       override def exitExpression(ctx: KotlinParser.ExpressionContext): Unit = {
+        expressionCounter -= 1
+        if(expressionCounter == 0) {
+          stack.pop
+        }
       }
 
       override def enterStatement(ctx: KotlinParser.StatementContext): Unit = {
-        Option(ctx.declaration()).map(_.functionDeclaration()).map { it =>
-          enterDeclareFunction(instructions, stack, isTopLevel _, it)
-        }
+        if(ctx.expression() != null) return
+//        Option(ctx.declaration()).map(_.functionDeclaration()).foreach { it => {
+//            val function = Function(name = it.simpleIdentifier().getText, parent = stack.headOption)
+//            push(function)
+//          }
+//        }
       }
       override def exitStatement(ctx: KotlinParser.StatementContext): Unit = {
-        Option(ctx.declaration()).map(_.functionDeclaration()).map { it =>
-          exitDeclareFunction(stack)
-        }
+//        Option(ctx.declaration()).map(_.functionDeclaration()).map { _ =>
+//          stack.pop()
+//        }
       }
 
     })
 
-    instructions.toList
+    stack.head.children.toList // TODO: Return file ast
   }
 
-  private def exitDeclareFunction(stack: mutable.Stack[Instruction]) = {
-    stack.pop()
   }
 
-  private def enterDeclareFunction(instructions: ListBuffer[Statement], stack: mutable.Stack[Instruction], isTopLevel: () => Boolean, ctx: FunctionDeclarationContext) = {
-    val function = Function(name = ctx.simpleIdentifier().getText, parent = stack.headOption)
-    stack.headOption.map(_.children += function)
-    if (isTopLevel()) instructions += function
-    stack.push(function)
-  }
+sealed trait Ast {
+  val parent: Option[Ast]
+  val children: mutable.MutableList[Ast] = new mutable.MutableList[Ast]
 }
+case class File(override val parent: Option[Ast] = None) extends Ast
 
-sealed trait Instruction {
-  val parent: Option[Instruction]
-  val children: mutable.MutableList[Instruction] = new mutable.MutableList[Instruction]
-}
-sealed trait Statement extends Instruction
+sealed trait Statement extends Ast
 sealed trait Expression extends Statement
 
 sealed trait Declaration extends Statement
-case class Function(val name: String, var bodyType: FunctionBodyType = RegularFunctionBody, override val parent: Option[Instruction]) extends Declaration
-case class Clazz(name: String, override val parent: Option[Instruction]) extends Declaration
-case class Property(name: String, override val parent: Option[Instruction]) extends Declaration
+case class Function(val name: String,
+                    var bodyType: FunctionBodyType = RegularFunctionBody,
+                    override val parent: Option[Ast]) extends Declaration
+case class Clazz(name: String, override val parent: Option[Ast]) extends Declaration
+case class Property(name: String, override val parent: Option[Ast]) extends Declaration
 
 sealed trait Call extends Expression
-case class FunctionCall(override val parent: Option[Instruction]) extends Call
+case class FunctionCall(val receiver: Option[String], val name: String, val params: Option[String], override val parent: Option[Ast]) extends Call
 
-case class IntExpression(val value: Int, override val parent: Option[Instruction]) extends Expression
+case class IntExpression(val value: Int, override val parent: Option[Ast]) extends Expression
 
-abstract sealed class FunctionBody {
-  val body: List[Instruction]
-}
+sealed case class FunctionBody(val bodyType: FunctionBodyType, override val parent: Option[Ast]) extends Ast
 
 // TODO: I want this nested, why doesn't it work!?
 sealed trait FunctionBodyType
@@ -132,16 +129,44 @@ case object RegularFunctionBody extends FunctionBodyType
 
 
 object ExpressionType {
-  def apply(ctx: ExpressionContext, parent: Option[Instruction]): Expression = {
+  def apply(ctx: ExpressionContext, parent: Option[Ast]): Expression = {
     val text = ctx.getText
-    if(text.endsWith(")")) {
-      FunctionCall(parent)
-    } else {
-      val triedInt = Try(text.toInt)
-      if(triedInt.isSuccess) {
-        IntExpression(triedInt.get, parent)
-      } else throw new IllegalStateException(s"Cannot use $text")
+
+
+    val intPattern = """^\d+$""".r
+    val optionalInt = intPattern.findFirstIn(text)
+    if(optionalInt.isDefined) {
+      return IntExpression(optionalInt.get.toInt, parent)
     }
+    val stringPattern = "^\"([^\"]*)\"$".r
+    val optionalString = stringPattern.findFirstIn(text)
+    if(optionalString.isDefined) {
+      return IntExpression(optionalString.get.toInt, parent)
+    }
+
+    val functionCallPattern = """(\w*\.)?(\w+)\((.*)\)""".r
+    val matches = functionCallPattern.findAllMatchIn(text).toList
+    if(matches.isEmpty) {
+      throw new IllegalStateException(s"Cannot use $text")
+    } else if(matches.size == 1) {
+      val matched = matches.head
+      FunctionCall(receiver = Option(matched.group(1)), name = matched.group(2), params = Option(matched.group(3)), parent = parent)
+    } else {
+      throw new IllegalStateException(s"Cannot use $text")
+    }
+//    text match {
+//      case functionCallPattern(receiver, params) => FunctionCall(
+//        if(receiver != null && !receiver.isEmpty) Some(receiver) else None,
+//        if(params != null && !params.isEmpty) Some(params) else None,
+//        parent
+//      )
+//      case _ => {
+//        val triedInt = Try(text.toInt)
+//        if(triedInt.isSuccess) {
+//          IntExpression(triedInt.get, parent)
+//        } else throw new IllegalStateException(s"Cannot use $text")
+//      }
+//    }
   }
 }
 
