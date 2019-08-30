@@ -103,7 +103,7 @@ sealed trait Ast {
   val parent: Option[Ast]
   val children: mutable.MutableList[Ast] = new mutable.MutableList[Ast]
 }
-case class File(override val parent: Option[Ast] = None) extends Ast
+case class File(final override val parent: Option[Ast] = None) extends Ast
 
 sealed trait Statement extends Ast
 sealed trait Expression extends Statement
@@ -132,7 +132,7 @@ object ExpressionType {
   def apply(ctx: ExpressionContext, parent: Option[Ast]): Expression = {
     val text = ctx.getText
 
-
+// TODO: Use pattern matching here
     val intPattern = """^\d+$""".r
     val optionalInt = intPattern.findFirstIn(text)
     if(optionalInt.isDefined) {
@@ -154,19 +154,6 @@ object ExpressionType {
     } else {
       throw new IllegalStateException(s"Cannot use $text")
     }
-//    text match {
-//      case functionCallPattern(receiver, params) => FunctionCall(
-//        if(receiver != null && !receiver.isEmpty) Some(receiver) else None,
-//        if(params != null && !params.isEmpty) Some(params) else None,
-//        parent
-//      )
-//      case _ => {
-//        val triedInt = Try(text.toInt)
-//        if(triedInt.isSuccess) {
-//          IntExpression(triedInt.get, parent)
-//        } else throw new IllegalStateException(s"Cannot use $text")
-//      }
-//    }
   }
 }
 

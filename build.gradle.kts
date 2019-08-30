@@ -2,7 +2,7 @@ group = "de.hanno.scala"
 version = "1.0-SNAPSHOT"
 
 plugins {
-    `base`
+    base
     id("scala")
     id("antlr")
 }
@@ -16,6 +16,8 @@ dependencies {
     implementation("org.antlr:antlr4-runtime:4.7.1")
     implementation("org.scala-lang:scala-library:2.11.12")
     implementation("com.github.cretz.kastree:kastree-ast-psi:0.4.0")
+    implementation("org.ow2.asm:asm:7.2-beta")
+    implementation("org.ow2.asm:asm-tree:7.2-beta")
 
     testImplementation("org.scalatest:scalatest_2.11:3.0.0")
     testImplementation("junit:junit:4.12")
