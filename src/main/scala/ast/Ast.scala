@@ -113,7 +113,9 @@ case class Function(val name: String,
                     var bodyType: FunctionBodyType = RegularFunctionBody,
                     override val parent: Option[Ast]) extends Declaration
 case class Clazz(name: String, override val parent: Option[Ast]) extends Declaration
-case class Property(name: String, override val parent: Option[Ast]) extends Declaration
+case class Property(name: String, override val parent: Option[Ast]) extends Declaration {
+  if(name == null || name.isEmpty) throw new IllegalArgumentException("Empty string for property name not allowed!")
+}
 
 sealed trait Call extends Expression
 case class FunctionCall(val receiver: Option[String], val name: String, val params: Option[String], override val parent: Option[Ast]) extends Call
