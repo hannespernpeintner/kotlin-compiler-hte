@@ -36,6 +36,12 @@ class BytecodeCompilerSpec extends FlatSpec {
     assert(loadedClazz.getSimpleName == "MyClass")
     assert(loadedClazz.getDeclaredFields.length == 1)
     assert(loadedClazz.getDeclaredFields.toList.head.getName == "myProperty")
+    val instance = loadedClazz.newInstance()
+    val propertyGetter = loadedClazz.getDeclaredMethods.filter(_.getName == "getMyProperty").head
+    val propertyValue = propertyGetter.invoke(instance)
+    assert(propertyValue == "Currently only strings")
+    loadedClazz.getDeclaredMethods.filter(_.getName == "setMyProperty").head.invoke(instance, "xxxxx")
+    assert(propertyGetter.invoke(instance) == "xxxxx")
   }
 }
 
