@@ -1,5 +1,6 @@
 package ast
 
+import ast.ExpressionType.functionCallPattern
 import de.hanno.kotlin.KotlinParser._
 import de.hanno.kotlin.{KotlinParser, KotlinParserBaseListener}
 import lexerparser.{KotlinFileTreeWalker, LexerParser}
@@ -121,6 +122,7 @@ sealed trait Call extends Expression
 case class FunctionCall(val receiver: Option[String], val name: String, val params: Option[String], override val parent: Option[Ast]) extends Call
 
 case class IntExpression(val value: Int, override val parent: Option[Ast]) extends Expression
+case class StringExpression(val value: String, override val parent: Option[Ast]) extends Expression
 
 sealed case class FunctionBody(val bodyType: FunctionBodyType, override val parent: Option[Ast]) extends Ast
 
@@ -131,30 +133,19 @@ case object RegularFunctionBody extends FunctionBodyType
 
 
 object ExpressionType {
+  val intPattern = """(^\d+$)""".r
+  val stringPattern = """"[^"]*"""".r
+  val functionCallPattern = """(\w*\.)?(\w+)\((.*)\)""".r
+
   def apply(ctx: ExpressionContext, parent: Option[Ast]): Expression = {
     val text = ctx.getText
 
-// TODO: Use pattern matching here
-    val intPattern = """^\d+$""".r
-    val optionalInt = intPattern.findFirstIn(text)
-    if(optionalInt.isDefined) {
-      return IntExpression(optionalInt.get.toInt, parent)
-    }
-    val stringPattern = "^\"([^\"]*)\"$".r
-    val optionalString = stringPattern.findFirstIn(text)
-    if(optionalString.isDefined) {
-      return IntExpression(optionalString.get.toInt, parent)
-    }
-
-    val functionCallPattern = """(\w*\.)?(\w+)\((.*)\)""".r
-    val matches = functionCallPattern.findAllMatchIn(text).toList
-    if(matches.isEmpty) {
-      throw new IllegalStateException(s"Cannot use $text")
-    } else if(matches.size == 1) {
-      val matched = matches.head
-      FunctionCall(receiver = Option(matched.group(1)), name = matched.group(2), params = Option(matched.group(3)), parent = parent)
-    } else {
-      throw new IllegalStateException(s"Cannot use $text")
+    text match {
+      case intPattern(i) => IntExpression(i.toInt, parent)
+      case stringPattern() => StringExpression(text, parent)
+      case functionCallPattern(receiver, functionName, params) => {
+        FunctionCall(Option(receiver), functionName, Option(params), parent)
+      }
     }
   }
 }
