@@ -1,12 +1,10 @@
 package ast
 
-import ast.ExpressionType.functionCallPattern
 import de.hanno.kotlin.KotlinParser._
 import de.hanno.kotlin.{KotlinParser, KotlinParserBaseListener}
 import lexerparser.{KotlinFileTreeWalker, LexerParser}
 
 import scala.collection.mutable
-import scala.util.Try
 
 class AstCreator extends KotlinParserBaseListener {
 
@@ -19,8 +17,6 @@ class AstCreator extends KotlinParserBaseListener {
     val stack = new mutable.Stack[Ast]
     stack.push(File())
 
-    var insideExpression = true
-
     def push(it: Ast): Unit = {
       stack.head.children += it
       stack.push(it)
@@ -28,7 +24,7 @@ class AstCreator extends KotlinParserBaseListener {
 
     new KotlinFileTreeWalker(file).walk(new KotlinParserBaseListener() {
       override def enterFunctionDeclaration(ctx: KotlinParser.FunctionDeclarationContext): Unit = {
-          val function = Function(name = ctx.simpleIdentifier().getText, parent = stack.headOption)
+          val function = Function(ctx.simpleIdentifier().getText, RegularFunctionBody, stack.headOption)
           push(function)
       }
 
@@ -110,16 +106,23 @@ sealed trait Statement extends Ast
 sealed trait Expression extends Statement
 
 sealed trait Declaration extends Statement
-case class Function(val name: String,
-                    var bodyType: FunctionBodyType = RegularFunctionBody,
-                    override val parent: Option[Ast]) extends Declaration
+case class Function(
+  val name: String,
+  var bodyType: FunctionBodyType = RegularFunctionBody,
+  override val parent: Option[Ast]
+) extends Declaration
+
 case class Clazz(name: String, override val parent: Option[Ast]) extends Declaration
 case class Property(name: String, override val parent: Option[Ast]) extends Declaration {
   if(name == null || name.isEmpty) throw new IllegalArgumentException("Empty string for property name not allowed!")
 }
 
 sealed trait Call extends Expression
-case class FunctionCall(val receiver: Option[String], val name: String, val params: Option[String], override val parent: Option[Ast]) extends Call
+case class FunctionCall(
+ val receiver: Option[String],
+ val name: String,
+ val params: Option[String], override val parent: Option[Ast]
+) extends Call
 
 case class IntExpression(val value: Int, override val parent: Option[Ast]) extends Expression
 case class StringExpression(val value: String, override val parent: Option[Ast]) extends Expression
@@ -133,19 +136,15 @@ case object RegularFunctionBody extends FunctionBodyType
 
 
 object ExpressionType {
-  val intPattern = """(^\d+$)""".r
-  val stringPattern = """"[^"]*"""".r
-  val functionCallPattern = """(\w*\.)?(\w+)\((.*)\)""".r
+  private val intPattern = """(^\d+$)""".r
+  private val stringPattern = """"[^"]*"""".r
+  private val functionCallPattern = """(\w*\.)?(\w+)\((.*)\)""".r
 
-  def apply(ctx: ExpressionContext, parent: Option[Ast]): Expression = {
-    val text = ctx.getText
-
-    text match {
-      case intPattern(i) => IntExpression(i.toInt, parent)
-      case stringPattern() => StringExpression(text, parent)
-      case functionCallPattern(receiver, functionName, params) => {
-        FunctionCall(Option(receiver), functionName, Option(params), parent)
-      }
+  def apply(ctx: ExpressionContext, parent: Option[Ast]): Expression = ctx.getText match {
+    case intPattern(i) => IntExpression(i.toInt, parent)
+    case stringPattern(text) => StringExpression(text, parent)
+    case functionCallPattern(receiver, functionName, params) => {
+      FunctionCall(Option(receiver), functionName, Option(params), parent)
     }
   }
 }
