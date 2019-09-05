@@ -51,7 +51,8 @@ class AstCreator extends KotlinParserBaseListener {
       override def enterPropertyDeclaration(ctx: KotlinParser.PropertyDeclarationContext): Unit = {
         val declarationContext = ctx.variableDeclaration()
         val expressionType = ExpressionType(ctx.expression(), None)
-        val property = Property(declarationContext.simpleIdentifier().getText, expressionType, stack.headOption)
+        import Extensions._
+        val property = Property(ctx.toPropertyType, declarationContext.simpleIdentifier().getText, expressionType, stack.headOption)
         push(property)
       }
 
@@ -103,4 +104,10 @@ class AstCreator extends KotlinParserBaseListener {
     stack.head.children.toList // TODO: Return file ast
   }
 
+}
+
+object Extensions {
+  implicit class PropertyDeclarationExtension(ctx: KotlinParser.PropertyDeclarationContext) {
+    def toPropertyType: PropertyType = if(ctx.VAL() == null) Var else Val
   }
+}

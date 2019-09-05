@@ -55,6 +55,7 @@ class TopLevelAstSpec extends FlatSpec {
 
     val foo = ast(1)
     assert(foo.isInstanceOf[Property])
+    assert(foo.asInstanceOf[Property].propertyType == Val)
     assert(foo.asInstanceOf[Property].name == "foo")
 
     val barCall = ast(2)
