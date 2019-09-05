@@ -21,7 +21,7 @@ case class Function(
 ) extends Declaration
 
 case class Clazz(name: String, override val parent: Option[Ast]) extends Declaration
-case class Property(name: String, override val parent: Option[Ast]) extends Declaration {
+case class Property(name: String, value: Expression, override val parent: Option[Ast]) extends Declaration {
   if(name == null || name.isEmpty) throw new IllegalArgumentException("Empty string for property name not allowed!")
 }
 
@@ -31,9 +31,10 @@ case class FunctionCall(
  val name: String,
  val params: Option[String], override val parent: Option[Ast]
 ) extends Call
+case class PropertyCall(val identifier: String, override val parent: Option[Ast]) extends Call
 
-case class IntExpression(val value: Int, override val parent: Option[Ast]) extends Expression
-case class StringExpression(val value: String, override val parent: Option[Ast]) extends Expression
+case class IntExpression(val value: Int, override val parent: Option[Ast] = None) extends Expression
+case class StringExpression(val value: String, override val parent: Option[Ast] = None) extends Expression
 
 sealed case class FunctionBody(val bodyType: FunctionBodyType, override val parent: Option[Ast]) extends Ast
 
@@ -52,7 +53,7 @@ object ExpressionType {
     case intPattern(i) => IntExpression(i.toInt, parent)
     case stringPattern(text) => StringExpression(text, parent)
     case functionCallPattern(receiver, functionName, params) => {
-      FunctionCall(Option(receiver), functionName, Option(params), parent)
+      FunctionCall(Option(receiver), functionName, if(params.isEmpty) None else Option(params), parent)
     }
   }
 }

@@ -38,4 +38,31 @@ class TopLevelAstSpec extends FlatSpec {
     assert(ast.head.asInstanceOf[Property].name == "foo")
   }
 
+  "A class level expression body function" should "be parsed correctly" in {
+    val code =
+      """class Foo {
+        |   fun bar() = 2
+        |}
+        |val foo = Foo()
+        |val bar = foo.bar()""".stripMargin
+    val ast = new AstCreator().create(code)
+    assert(ast.size == 3)
+    val classDef = ast.head
+    assert(classDef.isInstanceOf[Clazz])
+    assert(classDef.asInstanceOf[Clazz].name == "Foo")
+    assert(classDef.children.size == 1)
+    assert(ast.head.children.head.asInstanceOf[Function].bodyType == ExpressionBody)
+
+    val foo = ast(1)
+    assert(foo.isInstanceOf[Property])
+    assert(foo.asInstanceOf[Property].name == "foo")
+
+    val barCall = ast(2)
+    assert(barCall.isInstanceOf[Property])
+    assert(barCall.asInstanceOf[Property].name == "bar")
+    val barFunctionCall = barCall.asInstanceOf[Property].value
+    assert(barFunctionCall.isInstanceOf[FunctionCall])
+    assert(barFunctionCall.asInstanceOf[FunctionCall].name == "bar")
+    assert(barFunctionCall.asInstanceOf[FunctionCall].params.isEmpty)
+  }
 }

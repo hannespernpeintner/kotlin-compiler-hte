@@ -2,7 +2,7 @@ package compiler
 
 import java.util
 
-import ast.{Clazz, Property}
+import ast.{Clazz, IntExpression, Property}
 import org.scalatest.FlatSpec
 
 class BytecodeCompilerSpec extends FlatSpec {
@@ -25,7 +25,7 @@ class BytecodeCompilerSpec extends FlatSpec {
     val file = ast.File()
     val clazz = Clazz("MyClass", Option(file))
     file.children += clazz
-    clazz.children += Property("myProperty", Option(clazz))
+    clazz.children += Property("myProperty", IntExpression(1, None), Option(clazz))
 
     val classFiles = new BytecodeCompiler().compile(file)
     assert(classFiles.size == 1)

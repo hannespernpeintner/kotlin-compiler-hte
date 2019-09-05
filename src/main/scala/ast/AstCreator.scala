@@ -3,12 +3,13 @@ package ast
 import de.hanno.kotlin.KotlinParser.KotlinFileContext
 import de.hanno.kotlin.{KotlinParser, KotlinParserBaseListener}
 import lexerparser.{KotlinFileTreeWalker, LexerParser}
+import org.antlr.v4.runtime.tree.ErrorNode
 
 import scala.collection.mutable
 
 class AstCreator extends KotlinParserBaseListener {
 
-  def create(sourceCode: String): List[Ast] = {
+  def create(sourceCode: String): List[Ast]  = {
     create(new LexerParser().read(sourceCode))
   }
 
@@ -49,7 +50,8 @@ class AstCreator extends KotlinParserBaseListener {
 
       override def enterPropertyDeclaration(ctx: KotlinParser.PropertyDeclarationContext): Unit = {
         val declarationContext = ctx.variableDeclaration()
-        val property = Property(declarationContext.simpleIdentifier().getText, stack.headOption)
+        val expressionType = ExpressionType(ctx.expression(), None)
+        val property = Property(declarationContext.simpleIdentifier().getText, expressionType, stack.headOption)
         push(property)
       }
 
@@ -73,6 +75,13 @@ class AstCreator extends KotlinParserBaseListener {
         if(expressionCounter == 0) {
           stack.pop
         }
+      }
+
+      override def enterAssignableExpression(ctx: KotlinParser.AssignableExpressionContext): Unit = {
+        println("XXX")
+      }
+      override def exitAssignment(ctx: KotlinParser.AssignmentContext): Unit = {
+        println("YYY")
       }
 
       override def enterStatement(ctx: KotlinParser.StatementContext): Unit = {
