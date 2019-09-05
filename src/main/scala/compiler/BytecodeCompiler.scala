@@ -22,7 +22,6 @@ class BytecodeCompiler {
       clazz.children.foreach {
         case property: Property => cn.defineProperty(property)
       }
-      cn.visitEnd()
 
       val writer = new ClassWriter(ClassWriter.COMPUTE_FRAMES)
       cn.accept(writer)
